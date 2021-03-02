@@ -42,7 +42,7 @@ with open(config_file) as reading_file:
 meta = 'meta'
 report = 'report'
 
-# caviar = 'caviar'
+doordash = 'doordash'
 uber = 'uber'
 shift = 'shift'
 square ='square'
@@ -57,7 +57,7 @@ if not os.path.isdir(directory):
     try:
         os.mkdir(directory)
         os.mkdir(os.path.join(path_shared, period, meta))
-        # os.mkdir(os.path.join(path_shared, period, meta, caviar))
+        os.mkdir(os.path.join(path_shared, period, meta, doordash))
         os.mkdir(os.path.join(path_shared, period, meta, uber))
         os.mkdir(os.path.join(path_shared, period, meta, shift))
         os.mkdir(os.path.join(path_shared, period, meta, square))
@@ -73,6 +73,7 @@ locs = ["Dimond", "Uptown"]
 dn = ['Day', 'Night']
 for loc in locs:
     os.mknod(os.path.join(filepath, uber, 'Dummie__Uber_'+period+'_'+loc+'.csv'))
+    os.mknod(os.path.join(filepath, doordash, 'Dummie__Doordash_'+period+'_'+loc+'.csv'))
     for m in month:
         try:
             os.mknod(os.path.join(filepath, square, 'Dummie__'+period+m+'_'+loc+'.csv'))

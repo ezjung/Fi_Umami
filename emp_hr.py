@@ -12,9 +12,7 @@ output saved under report
 '''
 
 import pandas as pd
-import os, sys, datetime, openpyxl
-# config file path append to call config.py
-# sys.path.append(os.path.abspath('/media/sf_shared/my_program/scripts/Finance_Umami'))
+import os, datetime
 from config import *
 
 shift_file = period + biMonth + '.csv'
@@ -30,33 +28,30 @@ def dfWithDateIndexNoDollar(df):
     return df
 
 
-
 # Data/emp.csv to df; punch ID dropna & float --> str
 df = pd.read_csv(os.path.join(path, data, emp_file), header = [0])
 df.dropna(subset = ["Punch ID"], inplace = True)
-df.drop(columns=["Locations", "Departments", "Roles"], inplace = True)
+df.drop(columns=[
+    "Email", 
+    "Mobile Phone", 
+    "Locations", 
+    "Departments", 
+    "Roles"
+    ], inplace = True)
 df["Punch ID"] = df["Punch ID"].astype('int').astype('str') # Convert Int before str to remove extra .0
-# df["Punch ID"] = df["Punch ID"].astype('str')
 
 # Make emp dict: Punch ID: ["First Name last name", "wage"]
 emp = {}
 for ne, id in enumerate(df["Punch ID"]):
-    emp[id] = [df.iloc[ne, 0] + ' ' + df.iloc[ne, 1], df.iloc[ne, 4]]
+    emp[id] = [df.iloc[ne, 0] + ' ' + df.iloc[ne, 1], df.iloc[ne, 2]]
 
-# set header to 5th row
-df = pd.read_csv(os.path.join(path_shared, period, meta, shift,\
-    shift_file), header=[5])
-
-# errors = 'coerce' makes str NAN; downcast='integer' should be int but not this case
-df['Employee ID'] = pd.to_numeric(df['Employee ID'], errors='coerce')
-# dropna()
+df = pd.read_csv(os.path.join(path_shared, period, meta, shift, shift_file), header=[0])
+# drop the rows does not have employee_id
 df.dropna(subset=['Employee ID'], inplace = True)
-# make int again and str
-df['Employee ID'] = df['Employee ID'].astype('int').astype('str')
+# errors = 'coerce' makes str NAN; downcast='signed' should be int but not this case. Convert to string type
+df['Employee ID'] = pd.to_numeric(df['Employee ID'], downcast='integer', errors='coerce').astype('str')
 
 # to_datetime
-currentyear = datetime.datetime.now().year
-df['Date'] = df['Date'].apply(lambda x: x + ', ' + str(currentyear))
 df['Date'] = pd.to_datetime(df['Date'])
 # Add column for day of the week
 df['Day'] = df['Date'].dt.day_name() # if index, no dt. df.index.day_name()
@@ -64,13 +59,8 @@ df['Day'] = df['Date'].dt.day_name() # if index, no dt. df.index.day_name()
 # shift time splits using .split
 # df['start_time'], df['end_time'] = df['Shift Details'].str.split(' - ', n = 1, expand = True)
 
-# Better way
-df['start_time'], df['end_time'] = zip(*df['Shift Details'].str.split(' - '))
-
-# sort historically
-df.rename(columns={'Regular':'Hours'}, inplace=True)
 df.sort_values(by = ['Date'], inplace = True)
-df = df[['Date', 'Day', 'Employee ID', 'Hours', 'start_time', 'end_time', 'Location']]
+df = df[['Date', 'Day', 'Employee ID', 'Regular hours', 'In Time', 'Out Time', 'Location']]
 
 dim = (df['Location'] == 'Dimond')
 upt = (df['Location'] == 'Uptown')
@@ -88,25 +78,18 @@ for k, d in enumerate(umami):
         d.iloc[num, 2] = emp[eid][0]
     # Change Employee ID to name
     d.rename(columns={'Employee ID': 'Name'}, inplace = True)
-    # Hours to float, pivot need some number to crunch!
-    d['Hours'] = d['Hours'].astype('float')
+
     # df_Dim.dtypes: aggfunc default is 'mean', so it should be 'sum'
     dpivot = pd.pivot_table(d,
         index = ['Date', 'Day'], 
         columns = ['Name'],
         aggfunc = 'sum', 
-        values = 'Hours')
+        values = 'Regular hours')
     
     fname = os.path.join(path_shared, period, report, period + biMonth +'_'+ locs[k] + '_Work_Hrs' + '.csv')
     if not os.path.isfile(fname):
         with open(fname, 'w') as f:
             dpivot.to_csv(f, header=True)
-
-    # paths = [path_shared, path]
-    # for pth in paths:
-    #     filename = os.path.join(pth, period, report, period + biMonth +'_'+ locs[k] + '_Work_Hrs' + '.csv')
-    #     with open(filename, 'w') as f:
-    #         dpivot.to_csv(f, header=True)
 
 
 # Making Dummie excel table for manual input and cash income calculation
@@ -145,8 +128,6 @@ cash_dummie = pd.DataFrame(columns = ['bills', 'Dimond_ct', 'Dimond_cash', 'Upto
 cash_dummie['bills'] = ['100', '50', '20', '10', '5', '1', 'Total', 'Adj_Total', ' ']
 cash_dummie = cash_dummie.set_index('bills')
 
-
-
 # Make a file for manual input. Append to previous date
 filename = os.path.join(path_shared, period, report, period + '_' + 'manual_input.xlsx')
 if os.path.isfile(filename):
@@ -156,6 +137,7 @@ if os.path.isfile(filename):
 
     manual_input_df = pd.concat([sheet1, manual_input_df], axis=0)
     cash_dummie = pd.concat([sheet2, cash_dummie], axis=0)
+
 
 with pd.ExcelWriter(filename) as writer:
     manual_input_df.to_excel(writer, sheet_name='Cash_Payment')

@@ -6,7 +6,6 @@ import sys, os, datetime
 # sys.path.append(os.path.abspath('/media/sf_shared/my_program/scripts/Finance_Umami'))
 from config import *
 
-# shift_file = period + biMonth + '.csv'
 emp_file = 'emp.csv'
 
 # To use this func, df should have datetime convertible index
@@ -48,33 +47,35 @@ for ct, fn in enumerate(byLoc):
 	globals()[fn + biMonth] = pd.read_csv( \
 		os.path.join(path_shared, period, meta, square, \
 			period + biMonth + '_' + locs[ct] + '.csv'), index_col = [0]).T 
+	# dropna how all is important, to remove the non-opening day
 	globals()[fn + biMonth] = dfWithDateIndexNoDollar(globals()[fn + biMonth]). \
 		drop(columns = ['Returns', 'Discounts & Comps', \
 		'Net Sales', 'Gift Card Sales', 'Refunds by Amount', \
 		'Payments', 'Total Collected', 'Fees', 'Net Total', \
 		'Gross Sales', 'Tax', 'Total']).dropna(how='all', axis = 1)
-		# No need this because dfWithDateIndexNoDollar done this job already
-	#globals()[fn + biMonth].index = pd.to_datetime(globals()[fn + biMonth].index) # Convert index into datetime obj to join later
+
 	globals()[fn] = globals()[fn + biMonth].join(globals()[locs[ct]]) # join with work_hr df
-	# globals()[fn].index = globals()[fn].index.date # To turn datetime obj to str 'date'
 	globals()[fn].set_index([globals()[fn].index, 'Tip'], inplace=True)
 	globals()[fn].fillna(0.0, inplace=True)
 
-def tipCalc(df_tips_workers):
-	tip_df = pd.DataFrame(index = df_tips_workers.index, \
-		columns = df_tips_workers.columns).T
-	# Looping by day, Looping by column index
-	for col, colindex in enumerate(df_tips_workers.T):
-		# Looping by workers
-		for rn, workhours in enumerate(df_tips_workers.T[colindex]):
-			dailytotaltipAmount = colindex[1]
-			dailytotalhours = df_tips_workers.T[colindex].sum()
-			try:
-				# Tip amount should be rounded to 2 decimal point
-				tip_df.iloc[rn, col] = round(workhours*dailytotaltipAmount / dailytotalhours, 2)
-			except RuntimeWarning:
-				pass
-	return tip_df.T # Return format
+
+def tipCalc(df):
+	df['Total Worked Hours'] = df.apply('sum', axis = 1)
+	df = df.reset_index()
+	df['Tip for calculation'] = df['Tip']
+	df.set_index(['level_0', 'Tip'], inplace=True)
+
+	def f(x):
+		if x[-2] != 0:
+			factor = x[-1] /x [-2]
+		else:
+			factor = 0
+		return round(factor * x, 2)
+
+	df = df.apply(f, axis=1) 
+	df.drop(columns=['Total Worked Hours', 'Tip for calculation'], inplace=True)
+	return df
+
 
 locs = ["Dimond", "Uptown"]
 for Num, lc in enumerate(byLoc):
@@ -82,18 +83,10 @@ for Num, lc in enumerate(byLoc):
 	filename = os.path.join(\
 	path_shared, period, report,\
 	f'{period}{biMonth}_{locs[Num]}_Tips_dist.csv')
+
 	with open(filename, 'w') as f:
 		globals()[lc + biMonth].to_csv(f, header=True)		
 
-
-	# paths = [path_shared, path]
-	# for pth in paths:
-	# 	filename = os.path.join(\
-	# 		pth, period, report,\
-	# 		f'{period}{biMonth}_{locs[Num]}_Tips_dist.csv'\
-	# 	)
-	# 	with open(filename, 'w') as f:
-	# 		globals()[lc + biMonth].to_csv(f, header=True)		
 
 # Make Dict for total working hours by the name
 def comp(dF):
@@ -101,6 +94,7 @@ def comp(dF):
 	for name in dF:
 		compDict[name] = dF[name].sum()
 	return compDict
+
 # a, b are dfs with same type of data so that could be combined
 def getTotal(dim, upt):
 	Total = {}
@@ -159,26 +153,5 @@ if not os.path.isfile(filename):
 		forCPA.to_excel(writer, sheet_name='For_CPA')
 		forTipPrint.to_excel(writer, sheet_name='For_TIp_Printing')
 
-# filename1 = os.path.join(path_shared, period, report, period + biMonth + '_' + 'Umami_redone.xlsx')
-# with pd.ExcelWriter(filename1) as writer:
-# 	Dimond.to_excel(writer, sheet_name='Dimond_Hrs')
-# 	Uptown.to_excel(writer, sheet_name='Uptown_Hrs')
-# 	globals()[byLoc[0]+biMonth].to_excel(writer, sheet_name='Dimond_Tips')
-# 	globals()[byLoc[1]+biMonth].to_excel(writer, sheet_name='Uptown_Tips')
-# 	forCPA.to_excel(writer, sheet_name='For_CPA')
-# 	forTipPrint.to_excel(writer, sheet_name='For_TIp_Printing')
-
-
-# paths = [path_shared, path]
-# for pth in paths:
-# 	filename = os.path.join(pth, period, report, period + biMonth + '_' + 'Umami.xlsx')
-# 	with pd.ExcelWriter(filename) as writer:
-# 		Dimond.to_excel(writer, sheet_name='Dimond_Hrs')
-# 		Uptown.to_excel(writer, sheet_name='Uptown_Hrs')
-# 		globals()[byLoc[0]+biMonth].to_excel(writer, sheet_name='Dimond_Tips')
-# 		globals()[byLoc[1]+biMonth].to_excel(writer, sheet_name='Uptown_Tips')
-# 		forCPA.to_excel(writer, sheet_name='For_CPA')
-# 		forTipPrint.to_excel(writer, sheet_name='For_TIp_Printing')
-
-
-
+else:
+	pass
