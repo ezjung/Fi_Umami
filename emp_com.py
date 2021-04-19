@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+
 import pandas as pd
 import sys, os, datetime
 # config file path append to call config.py
@@ -58,8 +59,12 @@ for ct, fn in enumerate(byLoc):
 	globals()[fn].set_index([globals()[fn].index, 'Tip'], inplace=True)
 	globals()[fn].fillna(0.0, inplace=True)
 
+# Tip amount 
+no_tipped = ['Sungsoon Park', 'Sang Jin Lee']
 
-def tipCalc(df):
+def tipCalc(df_all):
+	df = df_all.drop(columns = no_tipped)
+	# df_no_tipper = df[no_tipped]
 	df['Total Worked Hours'] = df.apply('sum', axis = 1)
 	df = df.reset_index()
 	df['Tip for calculation'] = df['Tip']
@@ -74,6 +79,8 @@ def tipCalc(df):
 
 	df = df.apply(f, axis=1) 
 	df.drop(columns=['Total Worked Hours', 'Tip for calculation'], inplace=True)
+	# owner back to df
+	df[no_tipped] = 0
 	return df
 
 
