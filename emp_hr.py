@@ -130,7 +130,7 @@ cash_dummie = cash_dummie.set_index('bills')
 
 # Make a file for manual input. Append to previous date
 filename = os.path.join(path_shared, period, report, period + '_' + 'manual_input.xlsx')
-filename_workbook = os.path.join(path_shared, period, report, period + '_' + 'manual_input_workbook.xlsx')
+# filename_workbook = os.path.join(path_shared, period, report, period + '_' + 'manual_input_workbook.xlsx')
 
 if os.path.isfile(filename):
     sheet1 = pd.read_excel(filename, sheet_name='Cash_Payment', index_col=0, header=0)
@@ -140,13 +140,12 @@ if os.path.isfile(filename):
     manual_input_df = pd.concat([sheet1, manual_input_df], axis=0)
     cash_dummie = pd.concat([sheet2, cash_dummie], axis=0)
 
-
 with pd.ExcelWriter(filename) as writer:
     manual_input_df.to_excel(writer, sheet_name='Cash_Payment')
     cash_dummie.to_excel(writer, sheet_name='For_Cash_Calc')
 
-with pd.ExcelWriter(filename_workbook) as writer:
-    manual_input_df.to_excel(writer, sheet_name='Cash_Payment')
-    cash_dummie.to_excel(writer, sheet_name='For_Cash_Calc')
+# with pd.ExcelWriter(filename_workbook) as writer:
+#     manual_input_df.to_excel(writer, sheet_name='Cash_Payment')
+#     cash_dummie.to_excel(writer, sheet_name='For_Cash_Calc')
 
 

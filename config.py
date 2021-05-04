@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-yr, mo, biMonth = "2021", "04", "A"
+yr, mo, biMonth = "2021", "04", "B"
 
 path = '/media/sf_shared/my_program/Financial'
 
